@@ -1,24 +1,604 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>webllm-onefile</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+  <title>WebLLM Chat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-height: 900px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .header {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 16px 16px 0 0;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 16px;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .model-select {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+    }
+    
+    .load-btn {
+      padding: 8px 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .load-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .load-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 150px;
+    }
+    
+    .progress {
+      width: 100px;
+      height: 4px;
+      border-radius: 2px;
+    }
+    
+    .phase {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .err {
+      color: #dc2626;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .message {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      line-height: 1.4;
+    }
+    
+    .user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .bot {
+      align-self: flex-start;
+      background: #f3f4f6;
+      color: #1f2937;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .input-area {
+      padding: 20px;
+      border-top: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 0 0 16px 16px;
+    }
+    
+    .input-container {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    
+    .input {
+      flex: 1;
+      min-height: 40px;
+      max-height: 120px;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      background: white;
+    }
+    
+    .input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      min-width: 60px;
+    }
+    
+    .send {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+    
+    .send:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+    
+    .stop {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+    
+    .stop:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    .notification {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    
+    @media (max-width: 640px) {
+      .container {
+        margin: 10px;
+        height: calc(100vh - 20px);
+        border-radius: 12px;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .status {
+        min-width: auto;
+        justify-content: center;
+      }
+      
+      .message {
+        max-width: 85%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>WebLLM Chat</h1>
+      <div class="controls">
+        <select id="model" class="model-select">
+          <option>Loading models...</option>
+        </select>
+        <button id="load" class="load-btn">Load</button>
+        <div class="status">
+          <progress id="bar" class="progress hidden" value="0" max="100"></progress>
+          <span id="phase" class="phase">Select a model</span>
+          <span id="err" class="err"></span>
+        </div>
+      </div>
+    </div>
+    
+    <div id="chat" class="chat">
+      <!-- Messages will be added here -->
+    </div>
+    
+    <div class="input-area">
+      <div class="input-container">
+        <textarea id="input" class="input" placeholder="Type your message... (Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+        <button id="send" class="btn send">Send</button>
+        <button id="stop" class="btn stop hidden">Stop</button>
+      </div>
+    </div>
+  </div>
 
-    <meta property="og:title" content="webllm-onefile" />
-    <meta property="og:description" content="Lovable Generated Project" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
-
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm@0.2.52";
+    
+    // DOM elements
+    const chatEl = document.getElementById('chat');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const stopBtn = document.getElementById('stop');
+    const loadBtn = document.getElementById('load');
+    const modelSelect = document.getElementById('model');
+    const progressBar = document.getElementById('bar');
+    const phaseEl = document.getElementById('phase');
+    const errEl = document.getElementById('err');
+    
+    // State
+    let engine = null;
+    let isGenerating = false;
+    let abortController = null;
+    let messages = [];
+    let currentBotMessage = null;
+    
+    // Constants for localStorage
+    const MODEL_KEY = 'webllm.model.v1';
+    const CHAT_KEY = 'webllm.chat.v1';
+    
+    // Initialize
+    async function init() {
+      try {
+        // Load model registry
+        const prebuiltConfig = await webllm.prebuiltAppConfig();
+        const models = prebuiltConfig.model_list;
+        
+        modelSelect.innerHTML = '';
+        models.forEach(model => {
+          const option = document.createElement('option');
+          option.value = model.model_id;
+          option.textContent = model.model_id;
+          modelSelect.appendChild(option);
+        });
+        
+        // Restore saved model selection
+        const savedModel = localStorage.getItem(MODEL_KEY);
+        if (savedModel && models.find(m => m.model_id === savedModel)) {
+          modelSelect.value = savedModel;
+        }
+        
+        // Restore chat history
+        const savedChat = localStorage.getItem(CHAT_KEY);
+        if (savedChat) {
+          try {
+            messages = JSON.parse(savedChat);
+            renderMessages();
+          } catch (e) {
+            console.warn('Failed to restore chat history:', e);
+          }
+        }
+        
+        phaseEl.textContent = 'Select a model and click Load';
+      } catch (error) {
+        console.error('Failed to initialize:', error);
+        showError('Failed to load model registry');
+      }
+    }
+    
+    // UI helpers
+    function showError(message) {
+      errEl.textContent = message;
+      setTimeout(() => errEl.textContent = '', 5000);
+    }
+    
+    function updateProgress(progress, text) {
+      if (progress !== undefined) {
+        progressBar.value = progress * 100;
+        if (progress > 0 && progressBar.classList.contains('hidden')) {
+          progressBar.classList.remove('hidden');
+        }
+      }
+      if (text) {
+        phaseEl.textContent = text;
+      }
+    }
+    
+    function hideProgress() {
+      progressBar.classList.add('hidden');
+    }
+    
+    function setLoadingState(loading) {
+      loadBtn.disabled = loading;
+      loadBtn.textContent = loading ? 'Loading...' : 'Load';
+      if (!loading) {
+        hideProgress();
+      }
+    }
+    
+    function setGeneratingState(generating) {
+      isGenerating = generating;
+      sendBtn.disabled = generating || !engine;
+      sendBtn.textContent = generating ? 'Sending...' : 'Send';
+      stopBtn.classList.toggle('hidden', !generating);
+      inputEl.disabled = generating;
+    }
+    
+    // Model loading with fallbacks
+    async function loadModel() {
+      if (engine) {
+        engine.unload();
+        engine = null;
+      }
+      
+      errEl.textContent = '';
+      setLoadingState(true);
+      
+      const modelId = modelSelect.value;
+      if (!modelId) {
+        showError('Please select a model');
+        setLoadingState(false);
+        return;
+      }
+      
+      try {
+        const prebuiltConfig = await webllm.prebuiltAppConfig();
+        
+        // Try WASM first
+        try {
+          updateProgress(0, 'Loading model (WASM)...');
+          const wasmConfig = { ...prebuiltConfig, device: 'wasm' };
+          
+          engine = await webllm.CreateMLCEngine(modelId, {
+            appConfig: wasmConfig,
+            initProgressCallback: (progress) => {
+              updateProgress(progress.progress, `WASM: ${progress.text}`);
+            }
+          });
+          
+          phaseEl.textContent = 'Ready (WASM)';
+          localStorage.setItem(MODEL_KEY, modelId);
+          setLoadingState(false);
+          setGeneratingState(false);
+          return;
+          
+        } catch (wasmError) {
+          console.warn('WASM loading failed:', wasmError);
+          showError(`WASM failed: ${wasmError.message}`);
+          
+          // Try WebGPU fallback
+          try {
+            updateProgress(0, 'Loading model (WebGPU)...');
+            const webgpuConfig = { ...prebuiltConfig, device: 'webgpu' };
+            
+            engine = await webllm.CreateMLCEngine(modelId, {
+              appConfig: webgpuConfig,
+              initProgressCallback: (progress) => {
+                updateProgress(progress.progress, `WebGPU: ${progress.text}`);
+              }
+            });
+            
+            phaseEl.textContent = 'Ready (WebGPU)';
+            localStorage.setItem(MODEL_KEY, modelId);
+            setLoadingState(false);
+            setGeneratingState(false);
+            return;
+            
+          } catch (webgpuError) {
+            console.error('WebGPU loading failed:', webgpuError);
+            showError(`WebGPU failed: ${webgpuError.message}`);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Model loading failed:', error);
+        showError('Failed to load model. Open console for details.');
+      }
+      
+      setLoadingState(false);
+      phaseEl.textContent = 'Load failed - try another model';
+    }
+    
+    // Message rendering
+    function renderMessages() {
+      chatEl.innerHTML = '';
+      messages.forEach(msg => {
+        addMessageToUI(msg.role, msg.content, false);
+      });
+      scrollToBottom();
+    }
+    
+    function addMessageToUI(role, content, isStreaming = false) {
+      const messageEl = document.createElement('div');
+      messageEl.className = `message ${role}`;
+      messageEl.textContent = content;
+      
+      if (isStreaming && role === 'assistant') {
+        currentBotMessage = messageEl;
+      }
+      
+      chatEl.appendChild(messageEl);
+      scrollToBottom();
+      return messageEl;
+    }
+    
+    function scrollToBottom() {
+      chatEl.scrollTop = chatEl.scrollTop + 1000;
+    }
+    
+    // Chat functionality
+    async function sendMessage() {
+      const message = inputEl.value.trim();
+      if (!message) return;
+      
+      if (!engine) {
+        // Auto-attempt to load if not loaded
+        await loadModel();
+        if (!engine) {
+          showError("Can't send — model not loaded");
+          return;
+        }
+      }
+      
+      // Add user message
+      messages.push({ role: 'user', content: message });
+      addMessageToUI('user', message);
+      inputEl.value = '';
+      resizeTextarea();
+      
+      // Save to localStorage
+      localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
+      
+      setGeneratingState(true);
+      abortController = new AbortController();
+      
+      try {
+        let botResponse = '';
+        currentBotMessage = addMessageToUI('assistant', '', true);
+        
+        const stream = await engine.chat.completions.create({
+          messages: messages,
+          stream: true
+        }, { signal: abortController.signal });
+        
+        let tokenCount = 0;
+        const startTime = Date.now();
+        
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content;
+          if (delta) {
+            botResponse += delta;
+            currentBotMessage.textContent = botResponse;
+            tokenCount++;
+            
+            // Update decode rate
+            const elapsed = (Date.now() - startTime) / 1000;
+            const rate = (tokenCount / elapsed).toFixed(1);
+            phaseEl.textContent = `Generating... ${rate} tok/s`;
+            
+            scrollToBottom();
+          }
+        }
+        
+        // Finalize message
+        messages.push({ role: 'assistant', content: botResponse });
+        localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
+        phaseEl.textContent = `Ready - Generated ${tokenCount} tokens`;
+        
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          const notification = document.createElement('div');
+          notification.className = 'notification';
+          notification.textContent = 'Generation stopped';
+          chatEl.appendChild(notification);
+          scrollToBottom();
+        } else {
+          console.error('Generation failed:', error);
+          showError(`Generation failed: ${error.message}`);
+        }
+      } finally {
+        setGeneratingState(false);
+        currentBotMessage = null;
+      }
+    }
+    
+    function stopGeneration() {
+      if (abortController) {
+        abortController.abort();
+      }
+    }
+    
+    // Textarea auto-resize
+    function resizeTextarea() {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    }
+    
+    // Event listeners
+    loadBtn.addEventListener('click', loadModel);
+    sendBtn.addEventListener('click', sendMessage);
+    stopBtn.addEventListener('click', stopGeneration);
+    
+    inputEl.addEventListener('input', resizeTextarea);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!isGenerating) {
+          sendMessage();
+        }
+      }
+    });
+    
+    modelSelect.addEventListener('change', () => {
+      if (engine) {
+        phaseEl.textContent = 'Model changed - click Load to switch';
+      }
+    });
+    
+    // Initialize app
+    init();
+  </script>
+</body>
 </html>
