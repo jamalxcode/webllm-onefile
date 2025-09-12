@@ -313,10 +313,25 @@
     let registryLoaded = false;
     let prebuiltConfigCache = null;
 
+    async function getPrebuiltConfig() {
+      try {
+        const maybe = webllm.prebuiltAppConfig;
+        if (typeof maybe === 'function') {
+          return await maybe();
+        }
+        if (maybe && typeof maybe === 'object') {
+          return maybe;
+        }
+      } catch (e) {
+        console.warn('prebuiltAppConfig incompatible usage:', e);
+      }
+      return null;
+    }
+
     async function loadRegistry() {
       phaseEl.textContent = 'Loading model registry...';
       try {
-        prebuiltConfigCache = await webllm.prebuiltAppConfig();
+        prebuiltConfigCache = await getPrebuiltConfig();
         const models = prebuiltConfigCache?.model_list ?? [];
         modelSelect.innerHTML = '';
         if (!models.length) {
@@ -338,8 +353,8 @@
       } catch (error) {
         console.error('Failed to load registry:', error);
         registryLoaded = false;
-        modelSelect.innerHTML = '<option value="">Failed to load models</option>';
-        showError('Failed to load model registry');
+        modelSelect.innerHTML = '<option value=\"\">Failed to load models</option>';
+        showError(`Failed to load model registry: ${error?.message || error}`);
       }
     }
     
@@ -431,7 +446,8 @@
       }
       
       try {
-        const prebuiltConfig = prebuiltConfigCache || (await webllm.prebuiltAppConfig());
+        const prebuiltConfig = prebuiltConfigCache || (await getPrebuiltConfig());
+        if (!prebuiltConfig) throw new Error('No registry config available');
         
         // Try WASM first
         try {
