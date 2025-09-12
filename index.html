@@ -309,49 +309,67 @@
     const MODEL_KEY = 'webllm.model.v1';
     const CHAT_KEY = 'webllm.chat.v1';
     
-    // Initialize
-    async function init() {
+    // Model registry loader
+    let registryLoaded = false;
+    let prebuiltConfigCache = null;
+
+    async function loadRegistry() {
+      phaseEl.textContent = 'Loading model registry...';
       try {
-        // Load model registry
-        const prebuiltConfig = await webllm.prebuiltAppConfig();
-        const models = prebuiltConfig.model_list;
-        
+        prebuiltConfigCache = await webllm.prebuiltAppConfig();
+        const models = prebuiltConfigCache?.model_list ?? [];
         modelSelect.innerHTML = '';
-        models.forEach(model => {
+        if (!models.length) {
+          const opt = document.createElement('option');
+          opt.textContent = 'No models found';
+          opt.value = '';
+          modelSelect.appendChild(opt);
+          registryLoaded = false;
+          throw new Error('Empty model registry');
+        }
+        models.forEach(m => {
           const option = document.createElement('option');
-          option.value = model.model_id;
-          option.textContent = model.model_id;
+          option.value = m.model_id;
+          option.textContent = m.model_id;
           modelSelect.appendChild(option);
         });
-        
-        // Restore saved model selection
-        const savedModel = localStorage.getItem(MODEL_KEY);
-        if (savedModel && models.find(m => m.model_id === savedModel)) {
-          modelSelect.value = savedModel;
-        }
-        
-        // Restore chat history
-        const savedChat = localStorage.getItem(CHAT_KEY);
-        if (savedChat) {
-          try {
-            messages = JSON.parse(savedChat);
-            renderMessages();
-          } catch (e) {
-            console.warn('Failed to restore chat history:', e);
-          }
-        }
-        
+        registryLoaded = true;
         phaseEl.textContent = 'Select a model and click Load';
       } catch (error) {
-        console.error('Failed to initialize:', error);
+        console.error('Failed to load registry:', error);
+        registryLoaded = false;
+        modelSelect.innerHTML = '<option value="">Failed to load models</option>';
         showError('Failed to load model registry');
       }
     }
     
-    // UI helpers
+    // Initialize
+    async function init() {
+      await loadRegistry();
+
+      // Restore saved model selection
+      try {
+        const savedModel = localStorage.getItem(MODEL_KEY);
+        const list = prebuiltConfigCache?.model_list ?? [];
+        if (savedModel && list.find(m => m.model_id === savedModel)) {
+          modelSelect.value = savedModel;
+        }
+      } catch {}
+
+      // Restore chat history
+      const savedChat = localStorage.getItem(CHAT_KEY);
+      if (savedChat) {
+        try {
+          messages = JSON.parse(savedChat);
+          renderMessages();
+        } catch (e) {
+          console.warn('Failed to restore chat history:', e);
+        }
+      }
+    }
+    
     function showError(message) {
       errEl.textContent = message;
-      setTimeout(() => errEl.textContent = '', 5000);
     }
     
     function updateProgress(progress, text) {
@@ -386,7 +404,6 @@
       inputEl.disabled = generating;
     }
     
-    // Model loading with fallbacks
     async function loadModel() {
       if (engine) {
         engine.unload();
@@ -396,6 +413,16 @@
       errEl.textContent = '';
       setLoadingState(true);
       
+      if (!registryLoaded) {
+        await loadRegistry();
+        if (!registryLoaded) {
+          setLoadingState(false);
+          phaseEl.textContent = 'Registry unavailable';
+          showError('Failed to load model registry');
+          return;
+        }
+      }
+      
       const modelId = modelSelect.value;
       if (!modelId) {
         showError('Please select a model');
@@ -404,7 +431,7 @@
       }
       
       try {
-        const prebuiltConfig = await webllm.prebuiltAppConfig();
+        const prebuiltConfig = prebuiltConfigCache || (await webllm.prebuiltAppConfig());
         
         // Try WASM first
         try {
@@ -485,7 +512,7 @@
     }
     
     function scrollToBottom() {
-      chatEl.scrollTop = chatEl.scrollTop + 1000;
+      chatEl.scrollTop = chatEl.scrollHeight;
     }
     
     // Chat functionality
