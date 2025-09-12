@@ -328,13 +328,67 @@
       return null;
     }
 
+    // Filter models to show one representative from each family
+    function getRepresentativeModels(models) {
+      const families = {
+        'Llama': { priority: ['Llama-3.2-3B-Instruct-q4f32_1', 'Llama-3.2-1B-Instruct-q4f32_1', 'Llama-3.1-8B-Instruct-q4f16_1'] },
+        'Phi': { priority: ['Phi-3.5-mini-instruct-q4f16_1', 'Phi-3-mini-4k-instruct-q4f16_1'] },
+        'Mistral': { priority: ['Mistral-7B-Instruct-v0.3-q4f16_1', 'Mistral-7B-Instruct-v0.2-q4f16_1'] },
+        'Qwen': { priority: ['Qwen2.5-7B-Instruct-q4f16_1', 'Qwen2.5-3B-Instruct-q4f16_1', 'Qwen2.5-1.5B-Instruct-q4f16_1'] },
+        'Gemma': { priority: ['gemma-2-2b-it-q4f16_1', 'Gemma-2B-it-q4f16_1'] },
+        'TinyLlama': { priority: ['TinyLlama-1.1B-Chat-v0.4-q0f16', 'TinyLlama-1.1B-Chat-v0.4-q4f16_1'] }
+      };
+
+      const representatives = [];
+      
+      // First, try to find exact matches from priority lists
+      for (const [family, config] of Object.entries(families)) {
+        for (const preferredModel of config.priority) {
+          const found = models.find(m => m.model_id === preferredModel);
+          if (found) {
+            representatives.push({
+              ...found,
+              displayName: `${family} (${found.model_id.split('-')[found.model_id.split('-').length - 1]})`
+            });
+            break;
+          }
+        }
+      }
+      
+      // If we don't have representatives, try pattern matching
+      if (representatives.length === 0) {
+        const familyPatterns = {
+          'Llama': /llama/i,
+          'Phi': /phi/i,
+          'Mistral': /mistral/i,
+          'Qwen': /qwen/i,
+          'Gemma': /gemma/i,
+          'TinyLlama': /tinyllama/i
+        };
+        
+        const found = new Set();
+        for (const [family, pattern] of Object.entries(familyPatterns)) {
+          const match = models.find(m => pattern.test(m.model_id) && !found.has(family));
+          if (match) {
+            found.add(family);
+            representatives.push({
+              ...match,
+              displayName: `${family} (${match.model_id.split('-').slice(-1)[0]})`
+            });
+          }
+        }
+      }
+      
+      return representatives.length > 0 ? representatives : models.slice(0, 6); // fallback to first 6
+    }
+
     async function loadRegistry() {
       phaseEl.textContent = 'Loading model registry...';
       try {
         prebuiltConfigCache = await getPrebuiltConfig();
-        const models = prebuiltConfigCache?.model_list ?? [];
+        const allModels = prebuiltConfigCache?.model_list ?? [];
         modelSelect.innerHTML = '';
-        if (!models.length) {
+        if (!allModels.length) {
           const opt = document.createElement('option');
           opt.textContent = 'No models found';
           opt.value = '';
@@ -342,10 +396,14 @@
           registryLoaded = false;
           throw new Error('Empty model registry');
         }
+        
+        // Filter to representative models only
+        const models = getRepresentativeModels(allModels);
+        
         models.forEach(m => {
           const option = document.createElement('option');
           option.value = m.model_id;
-          option.textContent = m.model_id;
+          option.textContent = m.displayName || m.model_id;
           modelSelect.appendChild(option);
         });
         registryLoaded = true;
