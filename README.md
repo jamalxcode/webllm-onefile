@@ -8,14 +8,14 @@ I've created a **revolutionary web-based application** that brings powerful open
 
 ## 🔒 Privacy-First Architecture
 
-What sets this project apart is its **privacy-centric architecture**. Every interaction, computation, and conversation happens entirely within your local browser environment. Think of it like having a personal AI assistant that lives completely inside your web browser - no data ever leaves your device.
+What sets this project apart is its **privacy-centric architecture**. Every interaction, computation, and conversation happens entirely within your local browser environment. Think of it like having a personal AI assistant that lives completely inside your web browser: your messages and the model's answers never leave your device.
 
-The system operates independently of external servers, APIs, or third-party services, ensuring that **your conversations remain completely private**.
+No AI service or API is involved, so **your conversations remain private**. To be precise about what does go over the network: the page loads the WebLLM library from jsDelivr and downloads model weights from Hugging Face the first time you pick a model (both see your IP address, as any download does), and the site counts visits with GoatCounter (no cookies, no conversation content). The chat itself is stored only in this browser's localStorage.
 
 ### 🛡️ Key Privacy Advantages
 
 - **Complete confidentiality** of all AI conversations
-- **Zero data transmission** to external platforms  
+- **No conversation data is transmitted** to any platform  
 - **Exclusive access** limited to your browser session
 - **Enhanced security** through isolated processing
 - **No registration required** - just open and use
